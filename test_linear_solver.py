@@ -3,48 +3,56 @@ from linear_solver import (
     solve_linear_equations, 
     solve_linear_equations_by_inverse, 
     test_invertibility, 
-    test_span, 
+    test_invertibility_by_determinants,
+    test_span,
+    in_column_space, 
+    in_null_space,
+    generate_column_space_basis,
+    generate_null_space_basis,
     test_linear_dependence
 )
 from matrices_vectors import matrix_vector_product, matrix_sum, scalar_matrix
 
-
-def run_test(matrix_M, vector_b, test_name):
-    print(f"--- Testing Vector: {test_name} ---")
+def run_column_space_test(matrix_M, vector_b, matrix_M_basis, test_name):
+    print(f"\n[TEST CASE: {test_name} ]")
     
-    if test_span(matrix_M, vector_b):
-        print("Result: IN SPAN.")
-        # TODO: Solve the solution by using solve_linear_equations_by_inverse
-        x_inverse = solve_linear_equations_by_inverse(matrix_M, vector_b)
-        x_gauss = solve_linear_equations(matrix_M, vector_b)
-        # TODO: If the solution is not None, calculate and print the error: ||x_gauss - x_inverse||, 
-        # where x_gauss is the solution from solve_linear_equations, and x_inverse is the solution 
-        # from solve_linear_equations
-        if x_inverse is not None and x_gauss is not None:
-            # 計算 x_gauss + (-1 * x_inverse)
-            neg_x_inverse = scalar_matrix(-1.0, x_inverse)
-            diff_method = matrix_sum(x_gauss, neg_x_inverse)
-            
-            method_error = torch.norm(diff_method).item()
-            print(f"Error ||x_gauss - x_inverse||: {method_error:.6e}")
-        # TODO: If the solution is None, print a FAIL message:
-        else:
-            print("Inverse Method: FAILED (Matrix is singular/not invertible)")
-
-        # TODO: Perform the Ax-b error check as in previous assignment, print the error
-        # (Should done in HW1, not necessary to explain the codes)
-        x = solve_linear_equations(matrix_M, vector_b)
-        Ax = matrix_vector_product(matrix_M, x)
-        neg_b = scalar_matrix(-1.0, vector_b)
-        error_vec = matrix_sum(Ax, neg_b)
-        error_norm = torch.norm(error_vec).item()
-        print(f"L2 Norm of Error (||Ax - b||): {error_norm:.6e}")
+    # 1. First check if b is in the column space of the original matrix
+    if in_column_space(matrix_M, vector_b):
+        print(f"Status: SUCCESS")
+        print(f"Observation: Vector is confirmed to be in the Column Space of Matrix.")
+               
+        # 2. TODO: Double-check if the basis can actually span vector_b
+        # If in the span, print the following message
+        # "Verification: PASS (The vector is successfully spanned by the basis)."
+        # If not in the span, print the following message
+        # "Verification: FAIL (The basis does not span the vector)."
     else:
-        print("Result: NOT IN SPAN.")
-    print("")
+        print(f"Status: FAILED")
+        print(f"Observation: Vector b is NOT in the Column Space of the matrix.")
+    
+    print("-" * 40)
+
+def run_null_space_test(matrix_M, vector_b, matrix_M_basis, test_name):
+    print(f"\n[TEST CASE: {test_name}]")
+    
+    # 1. First check if b is in the null space of the original matrix
+    if in_null_space(matrix_M, vector_b):
+        print(f"Status: SUCCESS")
+        print(f"Observation: Vector is confirmed to be in the null space of Matrix.")
+        
+        # 2. TODO: Double-check if the basis can actually span vector_b
+        # If in the span, print the following message
+        # "Verification: PASS (The vector is successfully spanned by the basis)."
+        # If not in the span, print the following message
+        # "Verification: FAIL (The basis does not span the vector)." 
+    else:
+        print(f"Status: FAILED")
+        print(f"Observation: Vector is NOT in the Null Space of the matrix.")
+    
+    print("-" * 40)
 
 # --- 1. Define Matrix A---
-A = torch.tensor([
+matrix_A = torch.tensor([
     [1.0, 2.0,  1.0, -1.0],
     [3.0, 2.0,  4.0,  4.0],
     [4.0, 4.0,  5.0,  3.0], 
@@ -52,7 +60,7 @@ A = torch.tensor([
 ], dtype=torch.float32)
 
 # --- 2. Define Matrix B ---
-B = torch.tensor([
+matrix_B = torch.tensor([
     [1.0, 2.0,  1.0, -1.0],
     [3.0, 5.0,  4.0,  4.0], 
     [4.0, 4.0,  9.0,  3.0], 
@@ -61,47 +69,79 @@ B = torch.tensor([
 
 # --- 3. The 6 Test Vectors---
 test_b_vectors = [
-    (torch.tensor([[3.0], [13.0], [16.0], [8.0]]),  "Vector_Alpha"),
-    (torch.tensor([[1.0], [0.0], [0.0], [0.0]]),    "Vector_Beta"),
-    (torch.tensor([[5.0], [18.0], [23.0], [7.0]]),  "Vector_Gamma"),
+    (torch.tensor([[4.0], [4.0], [8.0], [2.0]]),    "Vector_Alpha"),
+    (torch.tensor([[-5.0], [3.5], [0.0], [2.0]]),   "Vector_Beta"),
+    (torch.tensor([[1.0], [0.0], [0.0], [0.0]]),    "Vector_Gamma"),
     (torch.tensor([[2.0], [1.0], [3.0], [4.0]]),    "Vector_Delta"),
-    (torch.tensor([[0.0], [5.0], [5.0], [1.0]]),    "Vector_Epsilon"),
-    (torch.tensor([[8.0], [4.0], [12.0], [1.0]]),   "Vector_Zeta")
+    (torch.tensor([[0.0], [0.0], [0.0], [0.0]]),    "Vector_Zero"),
+    (torch.tensor([[1.0], [2.0], [3.0], [4.0]]),    "Vector_Epsilon")
 ]
 
 if __name__ == "__main__":
-    print("Linear Algebra Lab: Gaussian vs. Inverse Method")
+    print("Linear Algebra Lab: Column Space & Null Space Analysis")
     print("=" * 60)
 
     # Part 1: Matrix Property Check
     # TODO: 
     # 1. Include results in the report.
-    # 2. Provide an analysis of the relation between the linear dependence and invertiblity 
-    print(f"Matrix A (Dependent)  - Is Dependent: {test_linear_dependence(A)}")
-    print(f"Matrix A (Dependent)  - Is Invertible: {test_invertibility(A)}")
+    # 2. Provide an analysis the relation between:
+    #    - linear dependence
+    #    - invertiblity
+    #    - invertibility_by_determinants 
+    #    - column space basis 
+    #    - null space basis
+    print(f"Matrix A - Is Dependent: {test_linear_dependence(matrix_A)}")
+    print(f"Matrix A - Is Invertible: {test_invertibility(matrix_A)}")
+    print(f"Matrix A - Is Invertible By Determinants: {test_invertibility_by_determinants(matrix_A)}")
+
+    matrix_A_column_basis = generate_column_space_basis(matrix_A)
+    matrix_A_null_basis = generate_null_space_basis(matrix_A)
+    print(f"Matrix A - Basis Matrix of Col A\n: {matrix_A_column_basis}")
+    print(f"Matrix A - Basis Matrix of Null A\n: {matrix_A_null_basis}")
+
     print("-" * 60)
-    print(f"Matrix B (Independent)- Is Dependent: {test_linear_dependence(B)}")
-    print(f"Matrix B (Independent)- Is Invertible: {test_invertibility(B)}")
+    print(f"Matrix B - Is Dependent: {test_linear_dependence(matrix_B)}")
+    print(f"Matrix B - Is Invertible: {test_invertibility(matrix_B)}")
+    print(f"Matrix B - Is Invertible By Determinants: {test_invertibility_by_determinants(matrix_B)}")
+
+    matrix_B_column_basis = generate_column_space_basis(matrix_B)
+    matrix_B_null_basis = generate_null_space_basis(matrix_B)
+    print(f"Matrix B - Basis Matrix of Col B\n: {matrix_B_column_basis}")
+    print(f"Matrix B - Basis Matrix of Null B\n: {matrix_B_null_basis}")
+
     print("=" * 60)
 
-    # Part 2: Test Scenario 1
+
+    # Part 2: Test Scenarios for matrix A
     # TODO:
     # 1. Include results in the report.
-    # 2. Provide an analysis of the relation between the span and invertibility 
-    # 3. Provide an analysis of the relation between solve_linear_equations and 
-    # solve_linear_equations_by_inverse
-    print("\n[SCENARIO 1] Testing with Dependent Matrix A")
+    # 2. Provide an analysis of the relation between:
+    #    - Vector is in the space 
+    #    - Vector can be spanned by which set, why?
+    print("\n[SCENARIO 1-1] Column Space Testing with Matrix A")
+    print("=" * 60)
+
     for vec, name in test_b_vectors:
-        run_test(A, vec, name)
-    print("-" * 50)
+        run_column_space_test(matrix_A, vec, matrix_A_column_basis, name)
 
+    print("\n[SCENARIO 1-2] Null Space Testing with Matrix A")
+    print("=" * 60)
+    for vec, name in test_b_vectors:
+        run_null_space_test(matrix_A, vec, matrix_A_null_basis, name)
 
-    # Part 3: Test Scenario 2
+    # Part 3: Test Scenarios for matrix B
     # TODO:
     # 1. Include results in the report.
-    # 2. Provide an analysis of the relation between the span and invertibility 
-    # 3. Provide an analysis of the relation between solve_linear_equations and 
-    # solve_linear_equations_by_inverse
-    print("\n[SCENARIO 2] Testing with Independent Matrix B")
+    # 2. Provide an analysis of the relation between:
+    #    - Vector is in the space 
+    #    - Vector can be spanned by which set, why?
+    print("\n[SCENARIO 2-1] Column Space Testing with Matrix B")
+    print("=" * 60)
+
     for vec, name in test_b_vectors:
-        run_test(B, vec, name)
+        run_column_space_test(matrix_B, vec, matrix_B_column_basis, name) 
+
+    print("\n[SCENARIO 2-2] Null Space Testing with Matrix B")
+    print("=" * 60)
+    for vec, name in test_b_vectors:
+        run_null_space_test(matrix_B, vec, matrix_B_null_basis, name)   

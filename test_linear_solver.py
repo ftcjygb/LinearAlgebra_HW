@@ -20,12 +20,16 @@ def run_column_space_test(matrix_M, vector_b, matrix_M_basis, test_name):
     if in_column_space(matrix_M, vector_b):
         print(f"Status: SUCCESS")
         print(f"Observation: Vector is confirmed to be in the Column Space of Matrix.")
-               
+
         # 2. TODO: Double-check if the basis can actually span vector_b
         # If in the span, print the following message
         # "Verification: PASS (The vector is successfully spanned by the basis)."
         # If not in the span, print the following message
         # "Verification: FAIL (The basis does not span the vector)."
+        if test_span(matrix_M_basis, vector_b):
+            print("Verification: PASS (The vector is successfully spanned by the basis).")
+        else:
+            print("Verification: FAIL (The basis does not span the vector).")
     else:
         print(f"Status: FAILED")
         print(f"Observation: Vector b is NOT in the Column Space of the matrix.")
